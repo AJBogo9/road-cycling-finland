@@ -180,3 +180,4 @@ The first build and its review on 2026-10-05 changed these things against the ap
 - Merged stretches stay inside one whole-km band of station distance, and the site rounds station distance up to 0.1 km, so the map's distance filter gives the same length as the segments.
 - `meta.json` carries `score_floor`, the lowest passing score rounded down to 5, where the map's colour ramp starts.
 - The site is deployed after all, to GitHub Pages from a public repository (see "Repository").
+- The map has no station-distance slider: it shows every passing road, at the owner's request. Stations stay on the map and the popup names the nearest one. `max_station_km` in `config.toml` now only sets the distance for the notebooks' top-roads list.

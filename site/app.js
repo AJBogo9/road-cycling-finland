@@ -14,9 +14,6 @@ const [meta, segments, stations] = await Promise.all(
 );
 
 const $ = (id) => document.getElementById(id);
-const slider = $('km');
-slider.max = Math.max(40, Math.ceil(meta.max_station_km));
-slider.value = meta.max_station_km;
 // the ramp runs from the lowest passing score to 100; stops must rise strictly
 const floor = Math.min(meta.score_floor, 95);
 const RAMP = COLOURS.flatMap((c, i) => [floor + (i * (100 - floor)) / (COLOURS.length - 1), c]);
@@ -43,35 +40,27 @@ const map = new maplibregl.Map({
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
-const near = (km) => ['<=', ['get', 'station_km'], km];
-const filters = (km) => ({
-  pass: ['all', ['==', ['get', 'passes'], true], near(km)],
-  fail: ['all', ['!=', ['get', 'passes'], true], near(km)],
-});
-
-function summarise(km) {
+function summarise() {
   let m = 0;
   for (const s of segments.features) {
-    const p = s.properties;
-    if (p.passes === true && p.station_km <= km) m += p.length_m;
+    if (s.properties.passes === true) m += s.properties.length_m;
   }
   $('summary').textContent =
-    `${Math.round(m / 1000)} km of carriageway passes all filters within ${km} km of a station.`;
-  $('km-out').textContent = km;
+    `${Math.round(m / 1000)} km of carriageway passes all filters. ` +
+    'Circles are rail and metro stations; click a road to see its nearest one.';
 }
 
 map.on('load', () => {
   map.addSource('segments', { type: 'geojson', data: segments });
   map.addSource('stations', { type: 'geojson', data: stations });
   const width = ['interpolate', ['linear'], ['zoom'], 8, 1.2, 12, 3, 15, 6];
-  const km = Number(slider.value);
   map.addLayer({
-    id: 'fail', type: 'line', source: 'segments', filter: filters(km).fail,
+    id: 'fail', type: 'line', source: 'segments', filter: ['!=', ['get', 'passes'], true],
     layout: { visibility: 'none', 'line-cap': 'round' },
     paint: { 'line-color': FAIL, 'line-width': width },
   });
   map.addLayer({
-    id: 'pass', type: 'line', source: 'segments', filter: filters(km).pass,
+    id: 'pass', type: 'line', source: 'segments', filter: ['==', ['get', 'passes'], true],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': ['interpolate', ['linear'], ['get', 'score'], ...RAMP], 'line-width': width },
   });
@@ -90,15 +79,7 @@ map.on('load', () => {
     },
     paint: { 'text-color': '#0b0b0b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
   });
-  summarise(km);
-});
-
-slider.addEventListener('input', () => {
-  const km = Number(slider.value);
-  const fl = filters(km);
-  map.setFilter('pass', fl.pass);
-  map.setFilter('fail', fl.fail);
-  summarise(km);
+  summarise();
 });
 
 $('show-fail').addEventListener('change', (e) => {

@@ -1,6 +1,6 @@
 # Road cycling Finland
 
-Finds quiet state roads with good asphalt in Uusimaa that you can reach by train or metro. Each road segment gets a pass or fail and a score from open Väylävirasto data: speed limit, daily traffic, wearing course and measured pavement condition. A static map shows the passing roads by score, with the distance to the nearest station you can use as a filter.
+Finds quiet state roads with good asphalt in Uusimaa that you can reach by train or metro. Each road segment gets a pass or fail and a score from open Väylävirasto data: speed limit, daily traffic, wearing course and measured pavement condition. A static map shows every passing road coloured by score, with rail and metro stations marked; clicking a road shows its nearest station.
 
 Map: <https://ajbogo9.github.io/road-cycling-finland/>
 
