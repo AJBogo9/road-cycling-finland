@@ -148,3 +148,7 @@ def load_raw(raw_dir) -> dict:
     raw["hsl_stops"] = read("hsl_stops.txt")
     raw["fetched"] = json.loads(read("fetched.json"))
     return raw
+
+
+def load_raw_log(raw_dir) -> dict:
+    return json.loads((Path(raw_dir) / "fetched.json").read_text(encoding="utf-8"))
