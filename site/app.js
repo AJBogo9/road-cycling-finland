@@ -14,6 +14,10 @@ const [meta, roads, stations] = await Promise.all(
 );
 
 const $ = (id) => document.getElementById(id);
+// ?embed: for an iframe on another page; no panel, a fullscreen button, and page scroll
+// passes through unless ctrl or two fingers are used
+const embed = new URLSearchParams(location.search).has('embed');
+document.body.classList.toggle('embed', embed);
 const f = meta.filters;
 const km = roads.features.reduce((sum, r) => sum + r.properties.length_m, 0) / 1000;
 $('summary').textContent =
@@ -29,19 +33,25 @@ $('score-floor').textContent = floor;
 const [south, west, north, east] = meta.bbox;
 // keep the box clear of the panel: a side card on desktop, a bottom sheet on phones
 const panel = $('panel').getBoundingClientRect();
+let padding = { top: 20, right: 20, bottom: 20, left: panel.right + 20 };
+if (embed) padding = 10;
+else if (matchMedia('(max-width: 600px)').matches) {
+  padding = { top: 10, right: 10, bottom: panel.height + 10, left: 10 };
+}
 const map = new maplibregl.Map({
   container: 'map',
   style: 'https://tiles.openfreemap.org/styles/positron',
   bounds: [[west, south], [east, north]],
-  fitBoundsOptions: {
-    padding: matchMedia('(max-width: 600px)').matches
-      ? { top: 10, right: 10, bottom: panel.height + 10, left: 10 }
-      : { top: 20, right: 20, bottom: 20, left: panel.right + 20 },
+  fitBoundsOptions: { padding },
+  attributionControl: {
+    compact: true,
+    customAttribution: 'Väylävirasto, Fintraffic, HSL (CC BY 4.0)',
   },
-  attributionControl: { compact: true },
+  cooperativeGestures: embed,
   hash: true,
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+if (embed) map.addControl(new maplibregl.FullscreenControl(), 'top-right');
 
 map.on('load', () => {
   map.addSource('roads', { type: 'geojson', data: roads });

@@ -10,6 +10,7 @@ html, body {
   font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 #map { position: fixed; inset: 0; }
+.embed #panel { display: none; }
 #panel {
   position: fixed; top: 12px; left: 12px; width: 300px; max-height: calc(100% - 24px);
   overflow: auto; padding: 14px 16px; background: var(--surface);
