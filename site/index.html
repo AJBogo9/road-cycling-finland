@@ -9,16 +9,14 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="map" role="region" aria-label="Map of scored roads"></div>
+  <div id="map" role="region" aria-label="Map of roads for road cycling"></div>
   <aside id="panel">
     <h1>Quiet roads for road cycling</h1>
     <p id="summary">Loading the road data.</p>
-    <label class="check"><input id="show-fail" type="checkbox"> Show roads that fail a filter</label>
     <div class="legend" aria-hidden="true">
       <div class="bar"></div>
       <div class="ticks"><span id="score-floor"></span><span>score</span><span>100</span></div>
     </div>
-    <p class="rule" id="rule"></p>
     <footer>
       Road data from <a href="https://vayla.fi/en/transport-network/data/open-data">Väylävirasto</a>,
       stations from <a href="https://www.digitraffic.fi/en/">Fintraffic Digitraffic</a> and

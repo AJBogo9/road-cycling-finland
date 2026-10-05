@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from roadcycling import config
-from roadcycling.score import components, missing, passes, ramp, score
+from roadcycling.score import components, passes, ramp, score
 
 CFG = config.load(Path(__file__).parents[1] / "config.toml")
 
@@ -57,4 +57,3 @@ def test_pass_rules_with_limits_and_missing_values():
         condition=[3, 5, 5, 5, 5, 5, np.nan],
     )
     assert passes(df, CFG).tolist() == [True, True, False, False, False, False, False]
-    assert missing(df).tolist() == ["", "", "", "surface", "", "", "condition"]

@@ -24,7 +24,6 @@ class Config:
     speed_limit: Ramp
     surface_weight: float
     surface_values: dict[str, float]
-    max_station_km: float
 
 
 def load(path: str | Path = "config.toml") -> Config:
@@ -50,6 +49,5 @@ def load(path: str | Path = "config.toml") -> Config:
         min_condition=filters["min_condition"],
         surface_weight=surface_weight,
         surface_values=surface_values,
-        max_station_km=raw["site"]["max_station_km"],
         **ramps,
     )

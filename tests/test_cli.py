@@ -26,13 +26,14 @@ def test_build_then_export(synthetic_raw, tmp_path):
     assert segs["passes"].tolist() == [True, False]
     cli.export_site(CFG, gpkg, tmp_path / "raw", tmp_path / "site")
     data = json.loads((tmp_path / "site" / "segments.geojson").read_text())
+    # only passing roads go to the map
+    assert len(data["features"]) == 1
     props = data["features"][0]["properties"]
-    assert props["station_name"] == "Kirkkonummi"
-    assert props["passes"] is True
+    assert props["station_name"] == "Kirkkonummi" and "passes" not in props
     x, y = data["features"][0]["geometry"]["coordinates"][0]
     assert 24 < x < 25 and 60 < y < 61 and round(x, 5) == x
     meta = json.loads((tmp_path / "site" / "meta.json").read_text())
-    assert meta["max_station_km"] == 15 and meta["fetched"] == "2026-10-05"
+    assert meta["fetched"] == "2026-10-05" and "max_station_km" not in meta
     assert meta["score_floor"] == 75
     names = [
         f["properties"]["name"]
@@ -70,4 +71,4 @@ def test_export_uses_the_current_thresholds(synthetic_raw, tmp_path):
     cli.build(CFG, tmp_path / "raw", gpkg)
     cli.export_site(replace(CFG, max_kvl=300), gpkg, tmp_path / "raw", tmp_path / "site")
     data = json.loads((tmp_path / "site" / "segments.geojson").read_text())
-    assert [f["properties"]["passes"] for f in data["features"]] == [False, False]
+    assert data["features"] == []

@@ -32,11 +32,11 @@ LAYERS = {
     "network": ("tiestotiedot:tieosoiteverkko", None),
     "speed": (
         "tiestotiedot:nopeusrajoitukset",
-        [*ADDRESS, "nopeusrajoitus", "sijaintitarkenne_puoli"],
+        [*ADDRESS, "nopeusrajoitus"],
     ),
     "traffic": (
         "tiestotiedot:liikennemaarat",
-        [*ADDRESS, "kvl", "laskentavuosi", "laskentatarkkuus"],
+        [*ADDRESS, "kvl", "laskentavuosi"],
     ),
     "pavement": (
         "tiestotiedot:sidotut_paallysrakenteet",
@@ -45,7 +45,7 @@ LAYERS = {
     "gravel": ("tiestotiedot:sitomattomat_pintarakenteet", ADDRESS),
     "condition": (
         "tiestotiedot:paallysteiden_kunto",
-        ["tie", "ajr", "kaista", "aosa", "aet", "losa", "let", "kunto_lk_nro", "tas", "ura"],
+        ["tie", "aosa", "aet", "losa", "let", "kunto_lk_nro"],
     ),
 }
 

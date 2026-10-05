@@ -31,7 +31,7 @@ def test_rail_keeps_finnish_passenger_stations():
         },
     ]
     got = rail_stations(raw)
-    assert got["name"].tolist() == ["A"] and got["type"].tolist() == ["rail"]
+    assert got["name"].tolist() == ["A"]
     assert got.crs == CRS
 
 
@@ -48,13 +48,12 @@ def test_metro_reads_station_rows_only():
 def test_nearest_measures_to_the_closest_point_of_the_segment():
     seg = gpd.GeoDataFrame({"name": ["road"]}, geometry=[LineString([(0, 0), (10000, 0)])], crs=CRS)
     st = gpd.GeoDataFrame(
-        {"name": ["by the end", "by the middle"], "type": ["rail", "metro"]},
+        {"name": ["by the end", "by the middle"]},
         geometry=[Point(10000, 2000), Point(5000, 3000)],
         crs=CRS,
     )
     out = nearest(seg, st)
     assert out["station_name"].tolist() == ["by the end"]
-    assert out["station_type"].tolist() == ["rail"]
     assert out["station_km"].tolist() == pytest.approx([2.0])
     assert out["name"].tolist() == ["road"] and len(out) == 1
 

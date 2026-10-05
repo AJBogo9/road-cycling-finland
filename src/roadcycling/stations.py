@@ -9,9 +9,9 @@ import pandas as pd
 from .network import CRS
 
 
-def _points(names, lons, lats, kind) -> gpd.GeoDataFrame:
+def _points(names, lons, lats) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(
-        {"name": names, "type": kind},
+        {"name": names},
         geometry=gpd.points_from_xy(lons, lats),
         crs="EPSG:4326",
     ).to_crs(CRS)
@@ -27,7 +27,6 @@ def rail_stations(raw, served=None) -> gpd.GeoDataFrame:
         [s["stationName"] for s in rows],
         [s["longitude"] for s in rows],
         [s["latitude"] for s in rows],
-        "rail",
     )
 
 
@@ -41,7 +40,6 @@ def metro_stations(stops_csv) -> gpd.GeoDataFrame:
         [r["stop_name"] for r in rows],
         [float(r["stop_lon"]) for r in rows],
         [float(r["stop_lat"]) for r in rows],
-        "metro",
     )
 
 
@@ -54,12 +52,10 @@ def all_stations(raw) -> gpd.GeoDataFrame:
 
 
 def nearest(segments, stations) -> gpd.GeoDataFrame:
-    s = stations.to_crs(segments.crs).rename(
-        columns={"name": "station_name", "type": "station_type"}
-    )
+    s = stations.to_crs(segments.crs).rename(columns={"name": "station_name"})
     joined = gpd.sjoin_nearest(
         segments,
-        s[["station_name", "station_type", "geometry"]],
+        s[["station_name", "geometry"]],
         how="left",
         distance_col="station_m",
     )

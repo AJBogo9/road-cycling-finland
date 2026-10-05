@@ -3,8 +3,6 @@
 import numpy as np
 import pandas as pd
 
-CHECKED = ["surface", "speed_limit", "kvl", "condition"]
-
 
 def ramp(x, best, worst):
     """1 at best, 0 at worst, linear between and clipped outside; nan stays nan"""
@@ -49,12 +47,5 @@ def passes(df, cfg) -> pd.Series:
     )
 
 
-def missing(df) -> pd.Series:
-    out = pd.Series("", index=df.index)
-    for c in CHECKED:
-        out = out + np.where(df[c].isna(), c + ",", "")
-    return out.str.rstrip(",")
-
-
 def apply(df, cfg):
-    return df.assign(score=score(df, cfg), passes=passes(df, cfg), missing=missing(df))
+    return df.assign(score=score(df, cfg), passes=passes(df, cfg))

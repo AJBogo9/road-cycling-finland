@@ -67,9 +67,7 @@ def test_split_part_cuts_at_every_end_and_keeps_the_worse_value():
         "surface": frame(
             start=[0, 0], end=[1000, 500], surface=["asphalt", "gravel"], surface_rank=[0, 2]
         ),
-        "condition": frame(
-            start=[0, 0], end=[500, 500], condition=[4, 2], iri=[1.0, 3.0], rut_mm=[2.0, 6.0]
-        ),
+        "condition": frame(start=[0, 0], end=[500, 500], condition=[4, 2]),
     }
     seg = split_part(0, 1000, layers)
     assert seg[["aet", "let"]].values.tolist() == [[0, 200], [200, 500], [500, 600], [600, 1000]]
@@ -78,7 +76,6 @@ def test_split_part_cuts_at_every_end_and_keeps_the_worse_value():
     assert seg["kvl_year"][1:].tolist() == [2024, 2024, 2024]
     assert seg["surface"].tolist() == ["gravel", "gravel", "asphalt", "asphalt"]
     assert seg["condition"][:2].tolist() == [2, 2] and seg["condition"][2:].isna().all()
-    assert seg["iri"][:2].tolist() == [3.0, 3.0]
 
 
 def test_build_segments_end_to_end(synthetic_raw):

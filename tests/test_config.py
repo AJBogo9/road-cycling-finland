@@ -14,7 +14,6 @@ def test_repo_config_loads():
     assert cfg.max_kvl == 1000
     assert cfg.traffic.weight == 0.4
     assert cfg.surface_values == {"asphalt": 1.0, "soft_asphalt": 0.7, "gravel": 0.0}
-    assert cfg.max_station_km == 15
 
 
 def test_swapped_bbox_raises(tmp_path):

@@ -1,7 +1,7 @@
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs';
 
 const COLOURS = ['#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
-const FAIL = '#a8a7a2';
+const SURFACE = { asphalt: 'asphalt', soft_asphalt: 'soft asphalt (PAB)' };
 
 async function load(url) {
   const r = await fetch(url);
@@ -9,60 +9,50 @@ async function load(url) {
   return r.json();
 }
 
-const [meta, segments, stations] = await Promise.all(
+const [meta, roads, stations] = await Promise.all(
   ['data/meta.json', 'data/segments.geojson', 'data/stations.geojson'].map(load),
 );
 
 const $ = (id) => document.getElementById(id);
-// the ramp runs from the lowest passing score to 100; stops must rise strictly
-const floor = Math.min(meta.score_floor, 95);
-const RAMP = COLOURS.flatMap((c, i) => [floor + (i * (100 - floor)) / (COLOURS.length - 1), c]);
-$('score-floor').textContent = floor;
-$('fetched').textContent = meta.fetched;
 const f = meta.filters;
-$('rule').textContent =
-  `Blue roads have asphalt, a speed limit of ${f.max_speed_limit} km/h or less, ` +
-  `at most ${f.max_kvl} vehicles a day and condition class ${f.min_condition} or better.`;
+const km = roads.features.reduce((sum, r) => sum + r.properties.length_m, 0) / 1000;
+$('summary').textContent =
+  `${Math.round(km).toLocaleString('en')} km of road with asphalt, a speed limit of ` +
+  `${f.max_speed_limit} km/h or less, at most ${f.max_kvl} vehicles a day and condition ` +
+  `class ${f.min_condition} or better. Circles mark rail and metro stations.`;
+$('fetched').textContent = meta.fetched;
+// the ramp runs from the lowest score on the map to 100; stops must rise strictly
+const floor = Math.min(meta.score_floor, 95);
+const ramp = COLOURS.flatMap((c, i) => [floor + (i * (100 - floor)) / (COLOURS.length - 1), c]);
+$('score-floor').textContent = floor;
 
 const [south, west, north, east] = meta.bbox;
+// keep the box clear of the panel: a side card on desktop, a bottom sheet on phones
+const panel = $('panel').getBoundingClientRect();
 const map = new maplibregl.Map({
   container: 'map',
   style: 'https://tiles.openfreemap.org/styles/positron',
   bounds: [[west, south], [east, north]],
-  // keep the box clear of the panel: a side card on desktop, a bottom sheet on phones
   fitBoundsOptions: {
     padding: matchMedia('(max-width: 600px)').matches
-      ? { top: 10, right: 10, bottom: Math.round(innerHeight * 0.42), left: 10 }
-      : { top: 20, right: 20, bottom: 20, left: 330 },
+      ? { top: 10, right: 10, bottom: panel.height + 10, left: 10 }
+      : { top: 20, right: 20, bottom: 20, left: panel.right + 20 },
   },
   attributionControl: { compact: true },
   hash: true,
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
-function summarise() {
-  let m = 0;
-  for (const s of segments.features) {
-    if (s.properties.passes === true) m += s.properties.length_m;
-  }
-  $('summary').textContent =
-    `${Math.round(m / 1000)} km of carriageway passes all filters. ` +
-    'Circles are rail and metro stations; click a road to see its nearest one.';
-}
-
 map.on('load', () => {
-  map.addSource('segments', { type: 'geojson', data: segments });
+  map.addSource('roads', { type: 'geojson', data: roads });
   map.addSource('stations', { type: 'geojson', data: stations });
-  const width = ['interpolate', ['linear'], ['zoom'], 8, 1.2, 12, 3, 15, 6];
   map.addLayer({
-    id: 'fail', type: 'line', source: 'segments', filter: ['!=', ['get', 'passes'], true],
-    layout: { visibility: 'none', 'line-cap': 'round' },
-    paint: { 'line-color': FAIL, 'line-width': width },
-  });
-  map.addLayer({
-    id: 'pass', type: 'line', source: 'segments', filter: ['==', ['get', 'passes'], true],
+    id: 'roads', type: 'line', source: 'roads',
     layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': ['interpolate', ['linear'], ['get', 'score'], ...RAMP], 'line-width': width },
+    paint: {
+      'line-color': ['interpolate', ['linear'], ['get', 'score'], ...ramp],
+      'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.2, 12, 3, 15, 6],
+    },
   });
   map.addLayer({
     id: 'stations', type: 'circle', source: 'stations',
@@ -79,42 +69,21 @@ map.on('load', () => {
     },
     paint: { 'text-color': '#0b0b0b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
   });
-  summarise();
 });
-
-$('show-fail').addEventListener('change', (e) => {
-  map.setLayoutProperty('fail', 'visibility', e.target.checked ? 'visible' : 'none');
-});
-
-const known = (v) => v !== null && v !== undefined && v !== '';
-const SURFACE = { asphalt: 'asphalt', soft_asphalt: 'soft asphalt (PAB)', gravel: 'gravel' };
-
-function failReasons(p) {
-  const out = [];
-  if (!known(p.surface)) out.push('surface unknown');
-  else if (!f.surfaces.includes(p.surface)) out.push(`${SURFACE[p.surface]} surface`);
-  if (!known(p.speed_limit)) out.push('no speed limit');
-  else if (p.speed_limit > f.max_speed_limit) out.push(`speed limit over ${f.max_speed_limit}`);
-  if (!known(p.kvl)) out.push('no traffic count');
-  else if (p.kvl > f.max_kvl) out.push(`over ${f.max_kvl} vehicles/day`);
-  if (!known(p.condition)) out.push('no condition data');
-  else if (p.condition < f.min_condition) out.push(`condition below ${f.min_condition}`);
-  return out;
-}
 
 function popupContent(p) {
+  const year = p.kvl_year ? ` (${p.kvl_year})` : '';
   const rows = [
-    ['Speed limit', known(p.speed_limit) ? `${p.speed_limit} km/h` : 'unknown'],
-    ['Traffic', known(p.kvl) ? `${p.kvl} vehicles/day${known(p.kvl_year) ? ` (${p.kvl_year})` : ''}` : 'unknown'],
-    ['Surface', SURFACE[p.surface] ?? 'unknown'],
-    ['Condition', known(p.condition) ? `class ${p.condition} of 5` : 'unknown'],
-    p.passes === true ? ['Score', `${p.score} of 100`] : ['Fails on', failReasons(p).join(', ')],
-    ['Station', known(p.station_name) ? `${p.station_name}, ${p.station_km} km` : 'unknown'],
+    ['Speed limit', `${p.speed_limit} km/h`],
+    ['Traffic', `${p.kvl} vehicles/day${year}`],
+    ['Surface', SURFACE[p.surface]],
+    ['Condition', `class ${p.condition} of 5`],
+    ['Score', `${p.score} of 100`],
+    ['Nearest station', `${p.station_name}, ${p.station_km} km`],
   ];
   const el = document.createElement('div');
   const h = document.createElement('strong');
   h.textContent = `${p.name || 'Unnamed road'} (road ${p.tie}, part ${p.osa})`;
-  el.append(h);
   const dl = document.createElement('dl');
   for (const [k, v] of rows) {
     const dt = document.createElement('dt');
@@ -123,23 +92,20 @@ function popupContent(p) {
     dd.textContent = v;
     dl.append(dt, dd);
   }
-  el.append(dl);
+  el.append(h, dl);
   return el;
 }
 
-const visible = () => ['pass', 'fail'].filter((id) => map.getLayoutProperty(id, 'visibility') !== 'none');
-
 map.on('click', (e) => {
+  // a box around the click, since the lines are thin
   const pad = 6;
   const box = [[e.point.x - pad, e.point.y - pad], [e.point.x + pad, e.point.y + pad]];
-  const [hit] = map.queryRenderedFeatures(box, { layers: visible() });
+  const [hit] = map.queryRenderedFeatures(box, { layers: ['roads'] });
   if (!hit) return;
   new maplibregl.Popup({ maxWidth: '300px' })
     .setLngLat(e.lngLat)
     .setDOMContent(popupContent(hit.properties))
     .addTo(map);
 });
-map.on('mousemove', (e) => {
-  const hits = map.queryRenderedFeatures(e.point, { layers: visible() });
-  map.getCanvas().style.cursor = hits.length ? 'pointer' : '';
-});
+map.on('mouseenter', 'roads', () => { map.getCanvas().style.cursor = 'pointer'; });
+map.on('mouseleave', 'roads', () => { map.getCanvas().style.cursor = ''; });

@@ -1,5 +1,5 @@
 [area]
-# south, west, north, east in degrees; default covers Uusimaa
+# south, west, north, east in degrees; the default holds Uusimaa and parts of its neighbours
 bbox = [59.75, 22.80, 60.95, 26.60]
 
 [filters]
@@ -29,6 +29,3 @@ weight = 0.1
 asphalt = 1.0
 soft_asphalt = 0.7
 gravel = 0.0
-
-[site]
-max_station_km = 15

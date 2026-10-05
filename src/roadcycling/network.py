@@ -24,7 +24,7 @@ RULES = {
     "speed": ("speed_limit", True, ["speed_limit"]),
     "traffic": ("kvl", True, ["kvl", "kvl_year"]),
     "surface": ("surface_rank", True, ["surface"]),
-    "condition": ("condition", False, ["condition", "iri", "rut_mm"]),
+    "condition": ("condition", False, ["condition"]),
 }
 ADDRESS = {
     "alkusijainti_tie": "tie",
@@ -45,8 +45,6 @@ COLUMNS = [
     "kvl_year",
     "surface",
     "condition",
-    "iri",
-    "rut_mm",
 ]
 
 
@@ -83,12 +81,8 @@ def interval_tables(raw) -> dict[str, pd.DataFrame]:
     surface = pd.concat([pavement, gravel], ignore_index=True)
     surface["surface_rank"] = surface["surface"].map(SURFACE_RANK)
 
-    condition = _table(
-        raw["condition"], ["tie", "aosa", "aet", "losa", "let", "kunto_lk_nro", "tas", "ura"]
-    )
-    condition = condition.rename(
-        columns={"kunto_lk_nro": "condition", "tas": "iri", "ura": "rut_mm"}
-    )
+    condition = _table(raw["condition"], ["tie", "aosa", "aet", "losa", "let", "kunto_lk_nro"])
+    condition = condition.rename(columns={"kunto_lk_nro": "condition"})
 
     tables = {"speed": speed, "traffic": traffic, "surface": surface, "condition": condition}
     out = {}
