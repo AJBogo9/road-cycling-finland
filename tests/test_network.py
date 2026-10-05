@@ -100,3 +100,22 @@ def test_build_segments_with_empty_layers(synthetic_raw):
     segs = build_segments(synthetic_raw)
     assert segs[["aet", "let"]].values.tolist() == [[0, 1000]]
     assert segs["kvl"].isna().all() and segs["surface"].isna().all()
+
+
+def test_clip_to_bbox_drops_segments_outside_the_box():
+    import geopandas as gpd
+    from shapely import LineString
+
+    from roadcycling.network import CRS, clip_to_bbox
+
+    # two short segments in EPSG:3067: one near Kirkkonummi (60.15 N), one near Hämeenlinna (61.0 N)
+    segs = gpd.GeoDataFrame(
+        {"tie": [1, 3]},
+        geometry=[
+            LineString([(361000, 6670000), (362000, 6670000)]),
+            LineString([(357000, 6765000), (358000, 6765000)]),
+        ],
+        crs=CRS,
+    )
+    kept = clip_to_bbox(segs, (59.75, 22.80, 60.95, 26.60))
+    assert kept["tie"].tolist() == [1]

@@ -3,7 +3,7 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from shapely import LineString, MultiLineString
+from shapely import LineString, MultiLineString, box
 
 CRS = "EPSG:3067"
 
@@ -200,3 +200,10 @@ def build_segments(raw) -> gpd.GeoDataFrame:
     gdf = gpd.GeoDataFrame(segs[[*COLUMNS, "geometry"]], geometry="geometry", crs=CRS)
     gdf["length_m"] = gdf.length
     return gdf.reset_index(drop=True)
+
+
+def clip_to_bbox(segments, bbox) -> gpd.GeoDataFrame:
+    """keep segments that touch the box; attribute layers were only fetched inside it"""
+    south, west, north, east = bbox
+    area = gpd.GeoSeries([box(west, south, east, north)], crs="EPSG:4326").to_crs(segments.crs)
+    return segments[segments.intersects(area.iloc[0])].reset_index(drop=True)
