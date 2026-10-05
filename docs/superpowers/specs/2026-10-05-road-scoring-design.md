@@ -1,6 +1,6 @@
 # Road scoring for road cycling: design
 
-Date: 2026-10-05. Status: approved in chat, spec under review.
+Date: 2026-10-05. Status: approved.
 
 ## Goal
 
@@ -93,7 +93,7 @@ For each road part:
 
 The result is a table of homogeneous segments with columns `tie`, `osa`, `aet`, `let`, `name`, `speed_limit`, `kvl`, `kvl_year`, `surface` (`asphalt`, `soft_asphalt`, `gravel` or null), `condition` (1 to 5 or null), `iri`, `rut_mm` and geometry.
 
-`surface` maps the wearing course types as follows: Asfalttibetoni, Kivimastiksiasfaltti and ABK become `asphalt`; PAB-B and PAB-V become `soft_asphalt`; any interval in the gravel layer becomes `gravel`. Any other wearing course type becomes null, and the coverage notebook lists these types by length.
+`surface` maps the wearing course types as follows: Asfalttibetoni, Kivimastiksiasfaltti and ABK become `asphalt`; PAB-B and PAB-V become `soft_asphalt`; any interval in the gravel layer becomes `gravel`. Where a gravel interval overlaps a wearing course, `gravel` wins, following the worse-value rule in step 3. Any other wearing course type becomes null, and the coverage notebook lists these types by length.
 
 ## Scoring
 
@@ -135,7 +135,7 @@ A static page in `site/` with MapLibre GL JS loaded from a CDN and a basemap tha
 
 - Passing segments are coloured by score. Failing segments are grey and hidden by default, with a toggle to show them.
 - A slider sets the maximum station distance.
-- Clicking a segment shows its road name and number, speed limit, traffic with count year, surface, condition and nearest station.
+- Clicking a segment shows its road name and number, speed limit, traffic with count year, surface, condition and nearest station. Condition is shown as the class number, since classes 4 and 5 share the label "hyvä tai erittäin hyvä".
 - Stations are drawn as markers labelled by name.
 - The layout works at phone width.
 - A footer gives the attributions listed below.
