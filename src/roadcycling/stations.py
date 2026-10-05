@@ -17,8 +17,12 @@ def _points(names, lons, lats, kind) -> gpd.GeoDataFrame:
     ).to_crs(CRS)
 
 
-def rail_stations(raw) -> gpd.GeoDataFrame:
+def rail_stations(raw, served=None) -> gpd.GeoDataFrame:
+    """finnish passenger stations, limited to the short codes in served when given"""
     rows = [s for s in raw if s["passengerTraffic"] and s["countryCode"] == "FI"]
+    if served is not None:
+        served = set(served)
+        rows = [s for s in rows if s["stationShortCode"] in served]
     return _points(
         [s["stationName"] for s in rows],
         [s["longitude"] for s in rows],
@@ -42,7 +46,10 @@ def metro_stations(stops_csv) -> gpd.GeoDataFrame:
 
 
 def all_stations(raw) -> gpd.GeoDataFrame:
-    parts = [rail_stations(raw["rail_stations"]), metro_stations(raw["hsl_stops"])]
+    parts = [
+        rail_stations(raw["rail_stations"], raw["rail_stops"]["stations"]),
+        metro_stations(raw["hsl_stops"]),
+    ]
     return gpd.GeoDataFrame(pd.concat(parts, ignore_index=True), crs=CRS)
 
 

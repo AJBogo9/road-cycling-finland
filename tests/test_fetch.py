@@ -6,7 +6,24 @@ import pytest
 from roadcycling import fetch
 
 BBOX = (60.0, 24.0, 60.5, 25.0)
-ALL = [*fetch.LAYERS, "rail_stations", "hsl_stops"]
+ALL = [*fetch.LAYERS, "rail_stations", "rail_stops", "hsl_stops"]
+
+
+def row(code, stopping=True, commercial=True, kind="DEPARTURE"):
+    return {
+        "stationShortCode": code,
+        "type": kind,
+        "trainStopping": stopping,
+        "commercialStop": commercial,
+    }
+
+
+TRAINS = [
+    {"trainCategory": "Commuter", "timeTableRows": [row("KKN"), row("HKI", kind="ARRIVAL")]},
+    {"trainCategory": "Long-distance", "timeTableRows": [row("KR"), row("IKO", stopping=False)]},
+    {"trainCategory": "Cargo", "timeTableRows": [row("PRV")]},
+    {"trainCategory": "Commuter", "timeTableRows": [row("NLÄ", commercial=False)]},
+]
 
 
 class FakeResponse:
@@ -32,6 +49,8 @@ class FakeSession:
             return FakeResponse(data={"type": "FeatureCollection", "features": self.features})
         if url == fetch.DIGITRAFFIC:
             return FakeResponse(data=[{"stationName": "Kirkkonummi"}])
+        if url.startswith(fetch.DIGITRAFFIC_TRAINS):
+            return FakeResponse(data=TRAINS)
         if url == fetch.HSL_GTFS:
             buf = io.BytesIO()
             with zipfile.ZipFile(buf, "w") as z:
@@ -74,3 +93,13 @@ def test_digitraffic_gets_user_header(tmp_path):
     fetch.fetch_all(tmp_path, BBOX, session=session)
     headers = next(h for url, _, h in session.calls if url == fetch.DIGITRAFFIC)
     assert headers["Digitraffic-User"]
+
+
+def test_served_stations_need_a_commercial_passenger_departure():
+    assert fetch.served_stations(TRAINS) == ["KKN", "KR"]
+
+
+def test_rail_stops_are_saved_with_their_day(tmp_path):
+    fetch.fetch_all(tmp_path, BBOX, session=FakeSession(1, [{"properties": {}}]))
+    stops = fetch.load_raw(tmp_path)["rail_stops"]
+    assert stops["stations"] == ["KKN", "KR"] and len(stops["date"]) == 10

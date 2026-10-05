@@ -12,8 +12,11 @@ import requests
 
 WFS = "https://avoinapi.vaylapilvi.fi/vaylatiedot/ows"
 DIGITRAFFIC = "https://rata.digitraffic.fi/api/v1/metadata/stations"
+DIGITRAFFIC_TRAINS = "https://rata.digitraffic.fi/api/v1/trains/"
 HSL_GTFS = "https://infopalvelut.storage.hsldev.com/gtfs/hsl.zip"
 USER = "road-cycling-finland/0.1"
+DIGITRAFFIC_HEADERS = {"Digitraffic-User": USER, "Accept-Encoding": "gzip"}
+PASSENGER_TRAINS = {"Long-distance", "Commuter"}
 TIMEOUT = 300
 
 ADDRESS = [
@@ -87,10 +90,30 @@ def fetch_layer(session, type_name, bbox, properties=None) -> dict:
 
 
 def fetch_rail(session) -> list[dict]:
-    headers = {"Digitraffic-User": USER, "Accept-Encoding": "gzip"}
-    r = session.get(DIGITRAFFIC, headers=headers, timeout=TIMEOUT)
+    r = session.get(DIGITRAFFIC, headers=DIGITRAFFIC_HEADERS, timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()
+
+
+def served_stations(trains) -> list[str]:
+    """short codes of stations where a passenger train departs with a commercial stop"""
+    codes = {
+        row["stationShortCode"]
+        for train in trains
+        if train["trainCategory"] in PASSENGER_TRAINS
+        for row in train["timeTableRows"]
+        if row["type"] == "DEPARTURE" and row["trainStopping"] and row.get("commercialStop")
+    }
+    return sorted(codes)
+
+
+def fetch_rail_stops(session) -> dict:
+    # the passenger flag in the station list also covers stations without trains,
+    # so keep only stations with a departure on the fetch day
+    day = date.today().isoformat()
+    r = session.get(DIGITRAFFIC_TRAINS + day, headers=DIGITRAFFIC_HEADERS, timeout=TIMEOUT)
+    r.raise_for_status()
+    return {"date": day, "stations": served_stations(r.json())}
 
 
 def fetch_hsl_stops(session) -> str:
@@ -122,6 +145,7 @@ def fetch_all(raw_dir, bbox, refresh=False, session=None) -> list[str]:
         for name, (type_name, props) in LAYERS.items()
     }
     sources["rail_stations"] = ("rail_stations.json", lambda: fetch_rail(session))
+    sources["rail_stops"] = ("rail_stops.json", lambda: fetch_rail_stops(session))
     sources["hsl_stops"] = ("hsl_stops.txt", lambda: fetch_hsl_stops(session))
 
     done = []
@@ -145,6 +169,7 @@ def load_raw(raw_dir) -> dict:
 
     raw = {name: json.loads(read(f"{name}.json")) for name in LAYERS}
     raw["rail_stations"] = json.loads(read("rail_stations.json"))
+    raw["rail_stops"] = json.loads(read("rail_stops.json"))
     raw["hsl_stops"] = read("hsl_stops.txt")
     raw["fetched"] = json.loads(read("fetched.json"))
     return raw

@@ -57,3 +57,25 @@ def test_nearest_measures_to_the_closest_point_of_the_segment():
     assert out["station_type"].tolist() == ["rail"]
     assert out["station_km"].tolist() == pytest.approx([2.0])
     assert out["name"].tolist() == ["road"] and len(out) == 1
+
+
+def test_rail_drops_stations_without_departures():
+    raw = [
+        {
+            "stationName": "Kirkkonummi",
+            "stationShortCode": "KKN",
+            "passengerTraffic": True,
+            "countryCode": "FI",
+            "latitude": 60.12,
+            "longitude": 24.44,
+        },
+        {
+            "stationName": "Porvoo",
+            "stationShortCode": "PRV",
+            "passengerTraffic": True,
+            "countryCode": "FI",
+            "latitude": 60.39,
+            "longitude": 25.66,
+        },
+    ]
+    assert rail_stations(raw, served=["KKN"])["name"].tolist() == ["Kirkkonummi"]

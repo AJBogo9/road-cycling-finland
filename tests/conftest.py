@@ -97,12 +97,14 @@ def synthetic_raw():
         "rail_stations": [
             {
                 "stationName": "Kirkkonummi",
+                "stationShortCode": "KKN",
                 "passengerTraffic": True,
                 "countryCode": "FI",
                 "latitude": 60.119648,
                 "longitude": 24.438814,
             }
         ],
+        "rail_stops": {"date": "2026-10-05", "stations": ["KKN"]},
         "hsl_stops": "stop_id,stop_name,stop_lat,stop_lon,location_type,vehicle_type\n"
         "1,Kivenlahden metroasema,60.1513,24.6338,1,1\n",
         "fetched": {"bbox": [59.75, 22.8, 60.95, 26.6], "layers": {"network": "2026-10-05"}},
