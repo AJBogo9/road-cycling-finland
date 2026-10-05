@@ -16,6 +16,8 @@ ASPHALT = {
 }
 SOFT_ASPHALT_PREFIX = "Pehmeät asfalttibetonit"
 SURFACE_RANK = {"asphalt": 0, "soft_asphalt": 1, "gravel": 2}
+# road numbers from 20000 up are ramps, service openings, street sections and light traffic paths
+MAX_ROAD_NUMBER = 20000
 
 # layer -> (column that picks the worst record, True when higher is worse, columns copied)
 RULES = {
@@ -105,7 +107,7 @@ def network_parts(geojson) -> list[dict]:
     parts = []
     for f in geojson["features"]:
         p, g = f["properties"], f["geometry"]
-        if p["ajorata"] == 2 or g is None:
+        if p["ajorata"] == 2 or p["tie"] >= MAX_ROAD_NUMBER or g is None:
             continue
         lines = [g["coordinates"]] if g["type"] == "LineString" else g["coordinates"]
         arrays = [np.asarray(line, dtype=float) for line in lines]

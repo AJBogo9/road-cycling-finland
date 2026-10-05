@@ -14,6 +14,7 @@ SITE_DATA = Path("site/data")
 
 def build(cfg, raw_dir=RAW, out=SEGMENTS) -> gpd.GeoDataFrame:
     raw = fetch.load_raw(raw_dir)
+    fetch.check_raw(raw, cfg.bbox)
     points = stations.all_stations(raw)
     segs = network.clip_to_bbox(network.build_segments(raw), cfg.bbox)
     segs = score.apply(segs, cfg)

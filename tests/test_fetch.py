@@ -103,3 +103,25 @@ def test_rail_stops_are_saved_with_their_day(tmp_path):
     fetch.fetch_all(tmp_path, BBOX, session=FakeSession(1, [{"properties": {}}]))
     stops = fetch.load_raw(tmp_path)["rail_stops"]
     assert stops["stations"] == ["KKN", "KR"] and len(stops["date"]) == 10
+
+
+class FailingSession(FakeSession):
+    """fails the feature request for one layer, like a timeout"""
+
+    def __init__(self, fail_type):
+        super().__init__(1, [{"properties": {}}])
+        self.fail_type = fail_type
+
+    def get(self, url, params=None, headers=None, timeout=None):
+        if params and params.get("typeNames") == self.fail_type and "resultType" not in params:
+            raise fetch.FetchError("timed out")
+        return super().get(url, params=params, headers=headers, timeout=timeout)
+
+
+def test_interrupted_fetch_after_a_box_change_resumes(tmp_path):
+    fetch.fetch_all(tmp_path, BBOX, session=FakeSession(1, [{"properties": {}}]))
+    new = (60.1, 24.3, 60.2, 24.5)
+    with pytest.raises(fetch.FetchError):
+        fetch.fetch_all(tmp_path, new, session=FailingSession("tiestotiedot:liikennemaarat"))
+    done = fetch.fetch_all(tmp_path, new, session=FakeSession(1, [{"properties": {}}]))
+    assert done == ALL[ALL.index("traffic") :]

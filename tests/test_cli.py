@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -46,3 +47,26 @@ def test_build_without_fetch_says_what_to_do(tmp_path, monkeypatch):
     )
     with pytest.raises(SystemExit, match="roadcycling fetch"):
         cli.main(["build"])
+
+
+def test_build_refuses_raw_data_for_another_box(synthetic_raw, tmp_path):
+    write_raw(synthetic_raw, tmp_path / "raw")
+    other = replace(CFG, bbox=(60.30, 25.50, 60.50, 25.90))
+    with pytest.raises(SystemExit, match="roadcycling fetch"):
+        cli.build(other, tmp_path / "raw", tmp_path / "segments.gpkg")
+
+
+def test_build_refuses_an_incomplete_fetch(synthetic_raw, tmp_path):
+    del synthetic_raw["fetched"]["layers"]["condition"]
+    write_raw(synthetic_raw, tmp_path / "raw")
+    with pytest.raises(SystemExit, match="condition"):
+        cli.build(CFG, tmp_path / "raw", tmp_path / "segments.gpkg")
+
+
+def test_export_uses_the_current_thresholds(synthetic_raw, tmp_path):
+    write_raw(synthetic_raw, tmp_path / "raw")
+    gpkg = tmp_path / "segments.gpkg"
+    cli.build(CFG, tmp_path / "raw", gpkg)
+    cli.export_site(replace(CFG, max_kvl=300), gpkg, tmp_path / "raw", tmp_path / "site")
+    data = json.loads((tmp_path / "site" / "segments.geojson").read_text())
+    assert [f["properties"]["passes"] for f in data["features"]] == [False, False]

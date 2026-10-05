@@ -50,6 +50,9 @@ LAYERS = {
 }
 
 
+SOURCES = [*LAYERS, "rail_stations", "rail_stops", "hsl_stops"]
+
+
 class FetchError(RuntimeError):
     pass
 
@@ -151,7 +154,8 @@ def fetch_all(raw_dir, bbox, refresh=False, session=None) -> list[str]:
     done = []
     for name, (filename, get) in sources.items():
         path = raw_dir / filename
-        if path.exists() and not refresh:
+        # a file counts as cached only when the log says it was fetched for this box
+        if path.exists() and not refresh and name in log["layers"]:
             continue
         data = get()
         _write(path, data if isinstance(data, str) else json.dumps(data, ensure_ascii=False))
@@ -173,6 +177,19 @@ def load_raw(raw_dir) -> dict:
     raw["hsl_stops"] = read("hsl_stops.txt")
     raw["fetched"] = json.loads(read("fetched.json"))
     return raw
+
+
+def check_raw(raw, bbox) -> None:
+    """stop when the downloaded data is for another box or a source is missing"""
+    log = raw["fetched"]
+    if log.get("bbox") != list(bbox):
+        raise SystemExit(
+            f"the downloaded data is for box {log.get('bbox')}, config.toml has {list(bbox)}: "
+            "run `roadcycling fetch`"
+        )
+    missing = [name for name in SOURCES if name not in log.get("layers", {})]
+    if missing:
+        raise SystemExit(f"{', '.join(missing)} not downloaded yet: run `roadcycling fetch`")
 
 
 def load_raw_log(raw_dir) -> dict:

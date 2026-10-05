@@ -24,12 +24,11 @@ Fetched on 2026-10-05 for the default box (59.75 to 60.95 N, 22.80 to 26.60 E), 
 
 | | |
 |---|---|
-| segments | 90,326 |
-| carriageway | 11,392 km |
+| segments | 83,379 |
+| carriageway | 9,130 km |
 | passing | 2,693 km |
 | passing within 15 km of a station | 1,340 km |
 | stations on the map | 78 rail, 30 metro |
-| fetch, build, export | 28 s, 33 s, 5 s |
 
 ## Notebooks
 
@@ -49,9 +48,9 @@ Both read `data/processed/segments.gpkg`, so run `fetch` and `build` first.
 
 ## Known limits
 
-- Only state roads (maantiet). Municipal and private roads have none of the four attributes in Väylävirasto's data.
-- Pavement condition is measured on about 62% of the network. Few roads lose out because of this: 40 km pass the other three filters but have no condition value.
-- Traffic counts are from 2009 to 2025, depending on the road.
+- Only state roads (maantiet) with road numbers below 20000. Municipal and private roads have none of the four attributes in Väylävirasto's data, and road numbers from 20000 up are ramps, service openings, street sections and light traffic paths.
+- Pavement condition is measured on 77% of the road length. In the default box, every segment that passes the other three filters has a condition value.
+- Traffic counts are from 2010 to 2025, depending on the road.
 - Station distance is a straight line, not a route.
 - A rail station counts if a passenger train departed from it on the day of the fetch, so a station served only on other days drops off.
 

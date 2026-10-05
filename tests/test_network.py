@@ -119,3 +119,14 @@ def test_clip_to_bbox_drops_segments_outside_the_box():
     )
     kept = clip_to_bbox(segs, (59.75, 22.80, 60.95, 26.60))
     assert kept["tie"].tolist() == [1]
+
+
+def test_network_parts_keep_road_numbers_below_20000(synthetic_raw):
+    from roadcycling.network import network_parts
+
+    ramp = dict(synthetic_raw["network"]["features"][0])
+    ramp["properties"] = {**ramp["properties"], "tie": 21408}
+    path = dict(synthetic_raw["network"]["features"][0])
+    path["properties"] = {**path["properties"], "tie": 70164}
+    synthetic_raw["network"]["features"] += [ramp, path]
+    assert [p["tie"] for p in network_parts(synthetic_raw["network"])] == [1]

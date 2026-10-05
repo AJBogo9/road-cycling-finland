@@ -6,6 +6,8 @@ from pathlib import Path
 import geopandas as gpd
 import shapely
 
+from . import score
+
 SITE_COLUMNS = [
     "tie",
     "osa",
@@ -71,7 +73,8 @@ def _geojson(gdf, path: Path) -> None:
 def to_site(segments, stations, cfg, out_dir, fetched_on) -> None:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    seg = segments.copy()
+    # recompute with the current thresholds, so the map matches the rule text in meta.json
+    seg = score.apply(segments, cfg)
     seg["score"] = seg["score"].round()
     seg = merge_runs(seg)
     seg["geometry"] = seg.geometry.simplify(SIMPLIFY_M)

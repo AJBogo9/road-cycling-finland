@@ -107,5 +107,21 @@ def synthetic_raw():
         "rail_stops": {"date": "2026-10-05", "stations": ["KKN"]},
         "hsl_stops": "stop_id,stop_name,stop_lat,stop_lon,location_type,vehicle_type\n"
         "1,Kivenlahden metroasema,60.1513,24.6338,1,1\n",
-        "fetched": {"bbox": [59.75, 22.8, 60.95, 26.6], "layers": {"network": "2026-10-05"}},
+        "fetched": {
+            "bbox": [59.75, 22.8, 60.95, 26.6],
+            "layers": {
+                name: "2026-10-05"
+                for name in [
+                    "network",
+                    "speed",
+                    "traffic",
+                    "pavement",
+                    "gravel",
+                    "condition",
+                    "rail_stations",
+                    "rail_stops",
+                    "hsl_stops",
+                ]
+            },
+        },
     }

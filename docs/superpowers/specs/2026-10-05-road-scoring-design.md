@@ -168,9 +168,12 @@ Private GitHub repository `AJBogo9/road-cycling-finland`, default branch `main`,
 
 ## Changes after the first build
 
-The first build on 2026-10-05 changed four things against the approved version:
+The first build and its review on 2026-10-05 changed these things against the approved version:
 
 - Cutting by M value replaced scaling by `ajr_pituus`, after road 11269 showed that a feature's addresses need not start at 0.
 - Segments outside the box are dropped (see "Network and join").
 - Rail stations need a passenger departure on the fetch day (see "Stations").
-- `export` merges touching segments of one road part whose map properties are equal, taking the smallest station distance and the summed length, and simplifies lines with a 2 m tolerance. Without this, `segments.geojson` was 68 MB; with it, 19 MB (1.7 MB gzipped).
+- `export` merges touching segments of one road part whose map properties are equal, taking the smallest station distance and the summed length, and simplifies lines with a 2 m tolerance. Without this, `segments.geojson` was 68 MB; with it, 16 MB.
+- Road numbers from 20000 up are dropped: ramps, service openings, street sections and light traffic paths, 2,262 km in the default box, none of which passed.
+- `fetch` counts a file as cached only when its log entry is for the current box, and `build` stops when the downloaded data is for another box or a source is missing.
+- `export` recomputes pass and score with the current `config.toml`, so the map and its rule text agree when only `export` is rerun.
