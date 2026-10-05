@@ -3,6 +3,9 @@
 import json
 from pathlib import Path
 
+import geopandas as gpd
+import shapely
+
 SITE_COLUMNS = [
     "tie",
     "osa",
@@ -21,6 +24,42 @@ SITE_COLUMNS = [
     "geometry",
 ]
 
+# what a reader sees on the map; touching segments that agree on all of it merge into one
+LOOK = [
+    "tie",
+    "osa",
+    "name",
+    "speed_limit",
+    "kvl",
+    "kvl_year",
+    "surface",
+    "condition",
+    "score",
+    "passes",
+    "station_name",
+    "station_type",
+]
+SIMPLIFY_M = 2.0
+
+
+def merge_runs(segments) -> gpd.GeoDataFrame:
+    s = segments.sort_values(["tie", "osa", "ajorata", "aet"]).reset_index(drop=True)
+    key = s[[*LOOK, "ajorata"]]
+    prev = key.shift()
+    # two missing values count as equal
+    equal = (key == prev) | (key.isna() & prev.isna())
+    same = equal.all(axis=1) & (s["aet"] == s["let"].shift())
+    run = (~same).cumsum()
+    groups = s.groupby(run)
+    looks = groups[LOOK].first()
+    sums = groups.agg(station_km=("station_km", "min"), length_m=("length_m", "sum"))
+    geometry = groups["geometry"].agg(
+        lambda g: shapely.line_merge(shapely.multilinestrings(shapely.get_parts(g.values)))
+    )
+    return gpd.GeoDataFrame(
+        looks.join(sums), geometry=geometry.values, crs=segments.crs
+    ).reset_index(drop=True)
+
 
 def _geojson(gdf, path: Path) -> None:
     path.unlink(missing_ok=True)
@@ -32,11 +71,13 @@ def _geojson(gdf, path: Path) -> None:
 def to_site(segments, stations, cfg, out_dir, fetched_on) -> None:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    seg = segments[SITE_COLUMNS].copy()
+    seg = segments.copy()
     seg["score"] = seg["score"].round()
+    seg = merge_runs(seg)
+    seg["geometry"] = seg.geometry.simplify(SIMPLIFY_M)
     seg["station_km"] = seg["station_km"].round(1)
     seg["length_m"] = seg["length_m"].round()
-    _geojson(seg, out / "segments.geojson")
+    _geojson(seg[SITE_COLUMNS], out / "segments.geojson")
 
     south, west, north, east = cfg.bbox
     near = stations.to_crs(4326).cx[west:east, south:north]
