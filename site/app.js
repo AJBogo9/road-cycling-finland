@@ -1,6 +1,6 @@
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.mjs';
 
-const RAMP = [45, '#6da7ec', 59, '#3987e5', 72, '#256abf', 86, '#184f95', 100, '#0d366b'];
+const COLOURS = ['#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
 const FAIL = '#a8a7a2';
 
 async function load(url) {
@@ -15,7 +15,12 @@ const [meta, segments, stations] = await Promise.all(
 
 const $ = (id) => document.getElementById(id);
 const slider = $('km');
+slider.max = Math.max(40, Math.ceil(meta.max_station_km));
 slider.value = meta.max_station_km;
+// the ramp runs from the lowest passing score to 100; stops must rise strictly
+const floor = Math.min(meta.score_floor, 95);
+const RAMP = COLOURS.flatMap((c, i) => [floor + (i * (100 - floor)) / (COLOURS.length - 1), c]);
+$('score-floor').textContent = floor;
 $('fetched').textContent = meta.fetched;
 const f = meta.filters;
 $('rule').textContent =

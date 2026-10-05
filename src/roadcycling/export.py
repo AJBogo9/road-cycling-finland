@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import geopandas as gpd
+import numpy as np
 import shapely
 
 from . import score
@@ -46,7 +47,8 @@ SIMPLIFY_M = 2.0
 
 def merge_runs(segments) -> gpd.GeoDataFrame:
     s = segments.sort_values(["tie", "osa", "ajorata", "aet"]).reset_index(drop=True)
-    key = s[[*LOOK, "ajorata"]]
+    # the map filters station distance in whole km, so a run stays inside one band
+    key = s[[*LOOK, "ajorata"]].assign(station_band=np.ceil(s["station_km"]))
     prev = key.shift()
     # two missing values count as equal
     equal = (key == prev) | (key.isna() & prev.isna())
@@ -78,7 +80,9 @@ def to_site(segments, stations, cfg, out_dir, fetched_on) -> None:
     seg["score"] = seg["score"].round()
     seg = merge_runs(seg)
     seg["geometry"] = seg.geometry.simplify(SIMPLIFY_M)
-    seg["station_km"] = seg["station_km"].round(1)
+    # round up to 0.1 km, so the map's whole-km distance filter matches the per-segment one;
+    # the inner round drops float noise such as 1.2 * 10 = 12.000000000000002
+    seg["station_km"] = np.ceil((seg["station_km"] * 10).round(6)) / 10
     seg["length_m"] = seg["length_m"].round()
     _geojson(seg[SITE_COLUMNS], out / "segments.geojson")
 
@@ -86,8 +90,11 @@ def to_site(segments, stations, cfg, out_dir, fetched_on) -> None:
     near = stations.to_crs(4326).cx[west:east, south:north]
     _geojson(near[["name", "type", "geometry"]], out / "stations.geojson")
 
+    passing = seg.loc[seg["passes"], "score"]
     meta = {
         "fetched": fetched_on,
+        # lowest passing score rounded down to 5, where the map's colour ramp starts
+        "score_floor": int(passing.min() // 5 * 5) if len(passing) else 0,
         "bbox": list(cfg.bbox),
         "max_station_km": cfg.max_station_km,
         "filters": {

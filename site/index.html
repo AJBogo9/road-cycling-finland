@@ -18,12 +18,16 @@
     <label class="check"><input id="show-fail" type="checkbox"> Show roads that fail a filter</label>
     <div class="legend" aria-hidden="true">
       <div class="bar"></div>
-      <div class="ticks"><span>45</span><span>score</span><span>100</span></div>
+      <div class="ticks"><span id="score-floor"></span><span>score</span><span>100</span></div>
     </div>
     <p class="rule" id="rule"></p>
     <footer>
-      Road data © Väylävirasto, CC BY 4.0. Stations © Fintraffic Digitraffic and HSL, CC BY 4.0.
-      Data fetched <span id="fetched"></span>.
+      Road data from <a href="https://vayla.fi/en/transport-network/data/open-data">Väylävirasto</a>,
+      stations from <a href="https://www.digitraffic.fi/en/">Fintraffic Digitraffic</a> and
+      <a href="https://www.hsl.fi/en">HSL</a>, all under
+      <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. This map combines and
+      scores their data. Data fetched <span id="fetched"></span>.
+      <a href="https://github.com/AJBogo9/road-cycling-finland">Source code</a>.
     </footer>
   </aside>
   <script type="module" src="app.js"></script>

@@ -3,6 +3,8 @@ name = "roadcycling"
 version = "0.1.0"
 description = "Score Finnish state roads for road cycling from open Väylävirasto data"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = ["geopandas>=1.1", "shapely>=2.1", "pyogrio>=0.11", "requests>=2.32"]
 
 [project.scripts]

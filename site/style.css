@@ -28,6 +28,7 @@ input[type="range"] { width: 100%; margin: 6px 0 10px; accent-color: #256abf; }
 .legend .ticks { display: flex; justify-content: space-between; color: var(--ink-2); font-size: 12px; }
 .rule { color: var(--ink-2); font-size: 12px; margin: 6px 0; }
 footer { color: var(--ink-2); font-size: 11px; margin-top: 10px; }
+footer a { color: inherit; }
 .maplibregl-popup-content { font: inherit; }
 .maplibregl-popup-content dl {
   display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 6px 0 0;

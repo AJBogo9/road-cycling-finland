@@ -33,6 +33,7 @@ def test_build_then_export(synthetic_raw, tmp_path):
     assert 24 < x < 25 and 60 < y < 61 and round(x, 5) == x
     meta = json.loads((tmp_path / "site" / "meta.json").read_text())
     assert meta["max_station_km"] == 15 and meta["fetched"] == "2026-10-05"
+    assert meta["score_floor"] == 75
     names = [
         f["properties"]["name"]
         for f in json.loads((tmp_path / "site" / "stations.geojson").read_text())["features"]

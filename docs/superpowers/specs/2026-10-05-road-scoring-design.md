@@ -164,7 +164,7 @@ Local preview: `python -m http.server -d site`.
 
 ## Repository
 
-Private GitHub repository `AJBogo9/road-cycling-finland`, default branch `main`, with commits directly to `main`.
+Public GitHub repository `AJBogo9/road-cycling-finland`, default branch `main`, with commits directly to `main`. The code is under Apache-2.0. A GitHub Actions workflow runs `fetch`, `build` and `export` and deploys `site/` to GitHub Pages on every push to `main` and weekly on Wednesdays.
 
 ## Changes after the first build
 
@@ -177,3 +177,6 @@ The first build and its review on 2026-10-05 changed these things against the ap
 - Road numbers from 20000 up are dropped: ramps, service openings, street sections and light traffic paths, 2,262 km in the default box, none of which passed.
 - `fetch` counts a file as cached only when its log entry is for the current box, and `build` stops when the downloaded data is for another box or a source is missing.
 - `export` recomputes pass and score with the current `config.toml`, so the map and its rule text agree when only `export` is rerun.
+- Merged stretches stay inside one whole-km band of station distance, and the site rounds station distance up to 0.1 km, so the map's distance filter gives the same length as the segments.
+- `meta.json` carries `score_floor`, the lowest passing score rounded down to 5, where the map's colour ramp starts.
+- The site is deployed after all, to GitHub Pages from a public repository (see "Repository").

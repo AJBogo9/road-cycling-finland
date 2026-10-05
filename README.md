@@ -2,6 +2,8 @@
 
 Finds quiet state roads with good asphalt in Uusimaa that you can reach by train or metro. Each road segment gets a pass or fail and a score from open Väylävirasto data: speed limit, daily traffic, wearing course and measured pavement condition. A static map shows the passing roads by score, with the distance to the nearest station you can use as a filter.
 
+Map: <https://ajbogo9.github.io/road-cycling-finland/>
+
 ## Quick start
 
 ```sh
@@ -30,6 +32,10 @@ Fetched on 2026-10-05 for the default box (59.75 to 60.95 N, 22.80 to 26.60 E), 
 | passing within 15 km of a station | 1,340 km |
 | stations on the map | 78 rail, 30 metro |
 
+## Deployment
+
+`.github/workflows/pages.yml` runs `fetch`, `build` and `export` on GitHub Actions and deploys `site/` to GitHub Pages. It runs on every push to `main`, every Wednesday at 03:00 UTC to refresh the data, and by hand from the Actions tab. The Wednesday run keeps the station check on a normal weekday timetable.
+
 ## Notebooks
 
 - `notebooks/01-coverage.ipynb`: how much of the network has each attribute, where values are missing, and a check of the join that rebuilds one road part by hand.
@@ -37,7 +43,9 @@ Fetched on 2026-10-05 for the default box (59.75 to 60.95 N, 22.80 to 26.60 E), 
 
 Both read `data/processed/segments.gpkg`, so run `fetch` and `build` first.
 
-## Data and licences
+## Licences
+
+The code is under the Apache License 2.0 (see `LICENSE`). The data comes from these sources under their own licences:
 
 | Data | Source | Licence |
 |---|---|---|
