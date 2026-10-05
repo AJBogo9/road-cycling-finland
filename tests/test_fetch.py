@@ -1,0 +1,76 @@
+import io
+import zipfile
+
+import pytest
+
+from roadcycling import fetch
+
+BBOX = (60.0, 24.0, 60.5, 25.0)
+ALL = [*fetch.LAYERS, "rail_stations", "hsl_stops"]
+
+
+class FakeResponse:
+    def __init__(self, text="", data=None, content=b""):
+        self.text, self._data, self.content = text, data, content
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._data
+
+
+class FakeSession:
+    def __init__(self, matched, features):
+        self.matched, self.features, self.calls = matched, features, []
+
+    def get(self, url, params=None, headers=None, timeout=None):
+        self.calls.append((url, params, headers))
+        if url == fetch.WFS and params.get("resultType") == "hits":
+            return FakeResponse(text=f'<wfs:FeatureCollection numberMatched="{self.matched}"/>')
+        if url == fetch.WFS:
+            return FakeResponse(data={"type": "FeatureCollection", "features": self.features})
+        if url == fetch.DIGITRAFFIC:
+            return FakeResponse(data=[{"stationName": "Kirkkonummi"}])
+        if url == fetch.HSL_GTFS:
+            buf = io.BytesIO()
+            with zipfile.ZipFile(buf, "w") as z:
+                z.writestr("stops.txt", "﻿stop_id,stop_name\n1,A\n")
+            return FakeResponse(content=buf.getvalue())
+        raise AssertionError(url)
+
+
+def test_bbox_is_lat_lon_urn():
+    params = fetch.wfs_params("t", BBOX, ["a", "b"])
+    assert params["bbox"] == "60.0,24.0,60.5,25.0,urn:ogc:def:crs:EPSG::4326"
+    assert params["propertyName"] == "a,b"
+    assert fetch.wfs_params("t", BBOX, hits=True)["resultType"] == "hits"
+
+
+def test_count_mismatch_raises():
+    with pytest.raises(fetch.FetchError, match="matched 3 features but sent 2"):
+        fetch.fetch_layer(FakeSession(3, [{}, {}]), "tiestotiedot:x", BBOX)
+
+
+def test_fetch_all_writes_then_uses_cache(tmp_path):
+    session = FakeSession(1, [{"properties": {}}])
+    assert fetch.fetch_all(tmp_path, BBOX, session=session) == ALL
+    raw = fetch.load_raw(tmp_path)
+    assert raw["hsl_stops"].startswith("stop_id")
+    assert raw["fetched"]["bbox"] == list(BBOX)
+    calls = len(session.calls)
+    assert fetch.fetch_all(tmp_path, BBOX, session=session) == []
+    assert len(session.calls) == calls
+
+
+def test_changed_bbox_fetches_again(tmp_path):
+    session = FakeSession(1, [{"properties": {}}])
+    fetch.fetch_all(tmp_path, BBOX, session=session)
+    assert fetch.fetch_all(tmp_path, (60.1, 24.3, 60.2, 24.5), session=session) == ALL
+
+
+def test_digitraffic_gets_user_header(tmp_path):
+    session = FakeSession(1, [{"properties": {}}])
+    fetch.fetch_all(tmp_path, BBOX, session=session)
+    headers = next(h for url, _, h in session.calls if url == fetch.DIGITRAFFIC)
+    assert headers["Digitraffic-User"]
