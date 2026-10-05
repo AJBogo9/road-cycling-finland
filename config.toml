@@ -1,0 +1,34 @@
+[area]
+# south, west, north, east in degrees; default covers Uusimaa
+bbox = [59.75, 22.80, 60.95, 26.60]
+
+[filters]
+surfaces = ["asphalt", "soft_asphalt"]
+max_speed_limit = 80
+max_kvl = 1000
+min_condition = 3
+
+[score.traffic]
+# vehicles per day, linear in log(kvl)
+best = 200
+worst = 3000
+weight = 0.4
+
+[score.condition]
+best = 5
+worst = 1
+weight = 0.3
+
+[score.speed_limit]
+best = 50
+worst = 100
+weight = 0.2
+
+[score.surface]
+weight = 0.1
+asphalt = 1.0
+soft_asphalt = 0.7
+gravel = 0.0
+
+[site]
+max_station_km = 15
