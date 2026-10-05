@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Road cycling Uusimaa</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.12.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map" role="region" aria-label="Map of scored roads"></div>
+  <aside id="panel">
+    <h1>Quiet roads near a station</h1>
+    <p id="summary">Loading the road data.</p>
+    <label class="field" for="km">Within <output id="km-out" for="km"></output> km of a rail or metro station</label>
+    <input id="km" type="range" min="1" max="40" step="1">
+    <label class="check"><input id="show-fail" type="checkbox"> Show roads that fail a filter</label>
+    <div class="legend" aria-hidden="true">
+      <div class="bar"></div>
+      <div class="ticks"><span>45</span><span>score</span><span>100</span></div>
+    </div>
+    <p class="rule" id="rule"></p>
+    <footer>
+      Road data © Väylävirasto, CC BY 4.0. Stations © Fintraffic Digitraffic and HSL, CC BY 4.0.
+      Data fetched <span id="fetched"></span>.
+    </footer>
+  </aside>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
