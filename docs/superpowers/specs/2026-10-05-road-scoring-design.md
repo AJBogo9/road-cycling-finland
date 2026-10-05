@@ -1,6 +1,6 @@
 # Road scoring for road cycling: design
 
-Date: 2026-10-05. Status: approved.
+Date: 2026-10-05. Status: approved, then updated after the first build (see "Changes after the first build").
 
 ## Goal
 
@@ -33,13 +33,14 @@ All road layers come from one WFS endpoint, `https://avoinapi.vaylapilvi.fi/vayl
 
 | Attribute | Layer | Fields used | Unit of location |
 |---|---|---|---|
-| Base network | `tiestotiedot:tieosoiteverkko` | `tie`, `osa`, `ajorata`, `ajr_pituus`, `nimi`, geometry | one road part per feature |
+| Base network | `tiestotiedot:tieosoiteverkko` | `tie`, `osa`, `ajorata`, `nimi`, geometry with M values | one feature per road part and carriageway |
 | Speed limit | `tiestotiedot:nopeusrajoitukset` | `nopeusrajoitus`, `sijaintitarkenne_puoli` | road address interval |
 | Traffic volume | `tiestotiedot:liikennemaarat` | `kvl`, `laskentavuosi`, `laskentatarkkuus` | road address interval |
 | Wearing course | `tiestotiedot:sidotut_paallysrakenteet` | `paallysteen_tyyppi` where `tyyppi = Kulutuskerros` | road address interval |
 | Gravel surface | `tiestotiedot:sitomattomat_pintarakenteet` | presence only | road address interval |
 | Pavement condition | `tiestotiedot:paallysteiden_kunto` | `kunto_lk_nro` (1 to 5), `tas`, `ura`, `kaista` | 100 m segment per lane |
-| Rail stations | Digitraffic `rata.digitraffic.fi/api/v1/metadata/stations` | `stationName`, `latitude`, `longitude`, `passengerTraffic` | point |
+| Rail stations | Digitraffic `rata.digitraffic.fi/api/v1/metadata/stations` | `stationName`, `stationShortCode`, `latitude`, `longitude`, `passengerTraffic` | point |
+| Rail departures | Digitraffic `rata.digitraffic.fi/api/v1/trains/<date>` | stations where a Long-distance or Commuter train departs with a commercial stop | station code |
 | Metro stations | HSL GTFS `stops.txt` | rows with `vehicle_type = 1` and `location_type = 1` | point |
 
 Road address intervals use `alkusijainti_tie`, `alkusijainti_osa`, `alkusijainti_etaisyys` and the matching `loppusijainti_*` fields. The condition layer uses `tie`, `aosa`, `aet`, `losa`, `let` for the same thing.
@@ -72,7 +73,7 @@ tests/
 config.toml
 ```
 
-Data flow: `fetch` writes one GeoPackage per layer to `data/raw/` and skips layers already cached unless `--refresh` is given. `build` reads the raw files and writes `data/processed/segments.gpkg`. `export` writes the files the site reads. `data/` and `site/data/` are gitignored, since anyone can regenerate them.
+Data flow: `fetch` saves each source as the server sent it (JSON) in `data/raw/` and skips sources already cached unless `--refresh` is given or the box in `config.toml` changed. Interval layers are requested without geometry, since the join uses road addresses only. `build` reads the raw files and writes `data/processed/segments.gpkg` with the layers `segments` and `stations`. `export` writes the files the site reads. `data/` and `site/data/` are gitignored, since anyone can regenerate them.
 
 `fetch` first asks the server for the match count (`resultType=hits`), then compares it with the number of features it received. If the two differ, `fetch` stops with an error, so a truncated download cannot reach the analysis without anyone noticing.
 
@@ -82,18 +83,20 @@ Tooling: Python 3.12 with uv, geopandas, shapely, pyogrio, requests, pytest and 
 
 ## Network and join
 
-The base network has one line per road part (`tie`, `osa`, `ajorata`). Carriageway 2 of divided roads is dropped, since it repeats carriageway 1 of the same road.
+The base network has one feature per road part and carriageway (`tie`, `osa`, `ajorata`). Carriageway 2 of divided roads is dropped, since it repeats carriageway 1 of the same road. The M value of each vertex is its road address distance. A part can have several features: road 11269 part 1 is divided (carriageways 1 and 2) from 0 to 1088 m and single (carriageway 0) from 1088 to 5897 m, so its carriageway 0 feature covers addresses 1088 to 5897.
 
-For each road part:
+For each feature, with address range [m0, m1] taken from its M values:
 
-1. Collect every attribute interval that touches the part. An interval that spans several parts is cut at part boundaries, using `ajr_pituus` as the length of each part.
-2. Take the union of all interval endpoints as breakpoints, and cut the part into segments between consecutive breakpoints.
-3. Give each segment the attribute values whose interval covers it. Where several values cover one segment, keep the one worse for cycling: the highest speed limit of the two road sides, and the lowest condition class among the measured lanes.
-4. Cut the geometry with `shapely.ops.substring`, scaling road address distance by the ratio of geometry length to `ajr_pituus`.
+1. Collect every attribute interval that touches the part. An interval that starts on an earlier part covers the part from its start, one that ends on a later part covers it to its end, and every interval is clipped to [m0, m1].
+2. Take the union of all interval endpoints as breakpoints, and cut [m0, m1] into segments between consecutive breakpoints.
+3. Give each segment the attribute values whose interval covers it. Where several records cover one segment, keep the record worse for cycling: the highest speed limit of the two road sides, the highest traffic count, the worst surface, and the lowest condition class among the measured lanes (with that record's IRI and rut depth).
+4. Cut the geometry by M value, interpolating the cut points along the line.
 
-The result is a table of homogeneous segments with columns `tie`, `osa`, `aet`, `let`, `name`, `speed_limit`, `kvl`, `kvl_year`, `surface` (`asphalt`, `soft_asphalt`, `gravel` or null), `condition` (1 to 5 or null), `iri`, `rut_mm` and geometry.
+Segments that do not touch the configured box are dropped. Network features crossing the box edge arrive whole, while attribute intervals arrive only where they touch the box, so the stretches outside would show missing values.
 
-`surface` maps the wearing course types as follows: Asfalttibetoni, Kivimastiksiasfaltti and ABK become `asphalt`; PAB-B and PAB-V become `soft_asphalt`; any interval in the gravel layer becomes `gravel`. Where a gravel interval overlaps a wearing course, `gravel` wins, following the worse-value rule in step 3. Any other wearing course type becomes null, and the coverage notebook lists these types by length.
+The result is a table of homogeneous segments with columns `tie`, `osa`, `ajorata`, `aet`, `let`, `name`, `speed_limit`, `kvl`, `kvl_year`, `surface` (`asphalt`, `soft_asphalt`, `gravel` or null), `condition` (1 to 5 or null), `iri`, `rut_mm` and geometry.
+
+`surface` maps the wearing course types as follows: Asfalttibetoni, Kivimastiksiasfaltti, Sidekerroksen asfalttibetoni (ABS), Kantavan kerroksen asfalttibetoni (ABK) and Avoin asfaltti become `asphalt`; every type starting with "Pehmeät asfalttibetonit" (PAB-B, PAB-V, PAB-O) becomes `soft_asphalt`; any interval in the gravel layer becomes `gravel`. Where a gravel interval overlaps a wearing course, `gravel` wins, following the worse-value rule in step 3. Any other wearing course type becomes null, and the coverage notebook lists these types by length.
 
 ## Scoring
 
@@ -119,7 +122,7 @@ A missing component is left out, and the remaining weights are rescaled to sum t
 
 ## Stations
 
-Rail stations are Digitraffic stations in Finland with `passengerTraffic = true`. Metro stations are all 30 HSL metro stations from GTFS. Each segment gets `station_name`, `station_type` (`rail` or `metro`) and `station_km`, the straight-line distance from the segment to the nearest station, computed with `geopandas.sjoin_nearest` in EPSG:3067.
+Rail stations are Digitraffic stations in Finland with `passengerTraffic = true` where a Long-distance or Commuter train departs with a commercial stop on the day of the fetch. The flag alone also keeps stations without trains: on 2026-10-05, 7 of the 85 flagged stations in the default box had no passenger departure (among them Porvoo and Nikkilä). Metro stations are all 30 HSL metro stations from GTFS. Each segment gets `station_name`, `station_type` (`rail` or `metro`) and `station_km`, the straight-line distance from the segment to the nearest station, computed with `geopandas.sjoin_nearest` in EPSG:3067.
 
 Station distance is an attribute and a map filter, not a pass condition. The map filter default (15 km) is set in `config.toml` and passed to the site through `site/data/meta.json`, together with the date the data was fetched.
 
@@ -135,9 +138,10 @@ A static page in `site/` with MapLibre GL JS loaded from a CDN and a basemap tha
 
 - Passing segments are coloured by score. Failing segments are grey and hidden by default, with a toggle to show them.
 - A slider sets the maximum station distance.
-- Clicking a segment shows its road name and number, speed limit, traffic with count year, surface, condition and nearest station. Condition is shown as the class number, since classes 4 and 5 share the label "hyvä tai erittäin hyvä".
+- Clicking a segment shows its road name and number, speed limit, traffic with count year, surface, condition and nearest station, plus the score for a passing segment or the reasons it fails for a failing one. The score of a failing segment can mislead, since missing components drop out of it. Condition is shown as the class number, since classes 4 and 5 share the label "hyvä tai erittäin hyvä".
 - Stations are drawn as markers labelled by name.
 - The layout works at phone width.
+- The URL hash holds the map view, so a view can be shared as a link.
 - A footer gives the attributions listed below.
 
 Local preview: `python -m http.server -d site`.
@@ -161,3 +165,12 @@ Local preview: `python -m http.server -d site`.
 ## Repository
 
 Private GitHub repository `AJBogo9/road-cycling-finland`, default branch `main`, with commits directly to `main`.
+
+## Changes after the first build
+
+The first build on 2026-10-05 changed four things against the approved version:
+
+- Cutting by M value replaced scaling by `ajr_pituus`, after road 11269 showed that a feature's addresses need not start at 0.
+- Segments outside the box are dropped (see "Network and join").
+- Rail stations need a passenger departure on the fetch day (see "Stations").
+- `export` merges touching segments of one road part whose map properties are equal, taking the smallest station distance and the summed length, and simplifies lines with a 2 m tolerance. Without this, `segments.geojson` was 68 MB; with it, 19 MB (1.7 MB gzipped).
